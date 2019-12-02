@@ -25,8 +25,9 @@ func main() {
 	defer resp.Body.Close()
 
 	if title, ok := getHTMLTitle(resp.Body); ok {
-		words := strings.SplitAfter(title, " ")
-		word := strings.TrimSpace(words[4])
+		tail := strings.SplitAfter(title, ":")
+		head := strings.Split(tail[1], "|")
+		word := strings.TrimSpace(head[0])
 
 		message := fmt.Sprintf("Today's word of the day, \"*%s*\"", word)
 
