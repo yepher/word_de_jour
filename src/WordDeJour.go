@@ -1,17 +1,23 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 
 	"golang.org/x/net/html"
 )
+
+type SlackMessage struct {
+	Channel string `json:"channel"`
+	Text    string `json:"text"`
+}
 
 func main() {
 	slackKey := flag.String("slackKey", "", "Slack API Key")
@@ -81,21 +87,33 @@ func getHTMLTitle(r io.Reader) (string, bool) {
 }
 
 func postMessage(apiKey string, channel string, message string) []byte {
-	message = url.QueryEscape(message)
-	channel = url.QueryEscape(channel)
+	slackMessage := &SlackMessage{
+		channel,
+		message,
+	}
+	json, err := json.Marshal(slackMessage)
+	//fmt.Printf("POST: %s\n\n", json)
 
-	url := "https://slack.com/api/chat.postMessage?token=" + apiKey + "&channel=" + channel + "&text=" + message
+	url := "https://slack.com/api/chat.postMessage"
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(json))
+	req.Header.Add("Authorization", "Bearer "+apiKey)
+	req.Header.Add("Content-type", "application/json; charset=utf-8")
+	//req.Header.Add("Content-Type", "text/html; charset=utf-8")
+	response, err := client.Do(req)
 
-	response, err := http.Get(url)
 	if err != nil {
 		fmt.Printf("%s", err)
 		os.Exit(1)
 	} else {
 		defer response.Body.Close()
 		contents, err := ioutil.ReadAll(response.Body)
+
 		if err != nil {
 			fmt.Printf("%s", err)
 			os.Exit(1)
+		} else {
+			fmt.Println(string(contents))
 		}
 
 		return contents
@@ -103,3 +121,27 @@ func postMessage(apiKey string, channel string, message string) []byte {
 
 	return nil
 }
+
+// func postMessage(apiKey string, channel string, message string) []byte {
+// 	message = url.QueryEscape(message)
+// 	channel = url.QueryEscape(channel)
+
+// 	url := "https://slack.com/api/chat.postMessage?token=" + apiKey + "&channel=" + channel + "&text=" + message
+
+// 	response, err := http.Get(url)
+// 	if err != nil {
+// 		fmt.Printf("%s", err)
+// 		os.Exit(1)
+// 	} else {
+// 		defer response.Body.Close()
+// 		contents, err := ioutil.ReadAll(response.Body)
+// 		if err != nil {
+// 			fmt.Printf("%s", err)
+// 			os.Exit(1)
+// 		}
+
+// 		return contents
+// 	}
+
+// 	return nil
+// }
